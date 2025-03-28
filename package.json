@@ -1,10 +1,10 @@
 {
-  "name": "knex-types-generator",
+  "name": "knex-ts-types-generator",
   "version": "1.0.0",
   "description": "Generate Knex types from a database using schema introspection",
   "main": "dist/cli.js",
   "bin": {
-    "knex-types-generator": "./dist/cli.js"
+    "knex-ts-types-generator": "./dist/cli.js"
   },
   "scripts": {
     "build": "tsc",

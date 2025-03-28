@@ -34,7 +34,7 @@ async function main() {
     .example('$0', 'Generate types using default settings')
     .example('$0 -o ./src/types/db.ts', 'Generate types to a custom location')
     .example('$0 --dry-run', 'Preview the generated types without writing to file')
-    .epilogue('For more information, check out the documentation at https://github.com/yourusername/knex-types-generator')
+    .epilogue('For more information, check out the documentation at https://github.com/FaureAlexis/knex-ts-types-generator')
     .help()
     .version()
     .argv;
