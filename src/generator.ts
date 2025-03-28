@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { Knex } from 'knex';
 import type { DatabaseSchema, DatabaseTable, DatabaseColumn, DatabaseEnum } from './types';
 import { introspectSchema } from './introspector';
 
@@ -95,7 +96,6 @@ ${columns}
 }
 
 function generateEnumType(enumType: DatabaseEnum): string {
-  console.log('Enum Type:', enumType);
   const values = enumType.values
     .replace('{', '')
     .replace('}', '')
@@ -118,31 +118,33 @@ ${tableNames}
 }`;
 }
 
-export async function generateTypes(outputPath: string): Promise<void> {
+export async function generateTypes(
+  outputPath: string,
+  db: Knex,
+  schema: string = 'public'
+): Promise<void> {
   // Create output directory if it doesn't exist
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
 
   // Get database schema
-  const schema = await introspectSchema();
-
-  console.log('Schema:', schema);
+  const dbSchema = await introspectSchema(db, schema);
 
   // Create a set of enum names for quick lookup
-  const enumNames = new Set<string>(schema.enums.map(e => e.name));
+  const enumNames = new Set<string>(dbSchema.enums.map(e => e.name));
 
   // Generate type definitions
-  const enumTypes = schema.enums
+  const enumTypes = dbSchema.enums
     .map(e => generateEnumType(e))
     .join('\n\n');
 
-  const tableInterfaces = schema.tables
+  const tableInterfaces = dbSchema.tables
     .map(table => generateTableInterface(table, enumNames))
     .join('\n\n');
 
-  console.log('Enum Types:', enumTypes);
-  console.log('Table Interfaces:', tableInterfaces);
+  console.log('Enum Types:', dbSchema.enums.length);
+  console.log('Table Interfaces:', dbSchema.tables.length);
 
-  const knexTables = generateKnexTables(schema.tables);
+  const knexTables = generateKnexTables(dbSchema.tables);
 
   // Combine all type definitions
   const content = `// This file is auto-generated. Do not edit it manually.

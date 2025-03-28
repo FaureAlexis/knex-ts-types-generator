@@ -2,21 +2,104 @@
 
 Generate Knex types from a database using schema introspection.
 
+## Installation
+
+```bash
+# Using npm
+npm install knex-ts-types-generator
+
+# Using pnpm
+pnpm add knex-ts-types-generator
+
+# Using yarn
+yarn add knex-ts-types-generator
+
+# Or run directly with npx
+npx knex-ts-types-generator
+```
 
 ## Prerequisites
 
 - Node.js >= 18
-- Copy `.env.example` to `.env` and set the environment variables
+- PostgreSQL database
+- Copy `.env.example` to `.env` and set the environment variables:
+  ```env
+  DB_HOST=localhost
+  DB_PORT=5432
+  DB_USER=postgres
+  DB_PASSWORD=postgres
+  DB_DATABASE=your_database
+  ```
 
 ## Usage
 
-The CLI accepts a single argument, the path to the output file. By default, it will output to `./types/db.ts`.
+The CLI provides several options for connecting to your database and generating types:
 
 ```bash
-npx knex-ts-types-generator --output <output-file>
+# Default usage - outputs to ./types/db.ts
+npx knex-ts-types-generator
+
+# Specify custom output file
+npx knex-ts-types-generator --output ./src/types/database.ts
+
+# Use a different schema (default is 'public')
+npx knex-ts-types-generator --schema my_schema
+
+# Preview the generated types without writing to file
+npx knex-ts-types-generator --dry-run
+
+# Connect to a specific database
+npx knex-ts-types-generator \
+  --host localhost \
+  --port 5432 \
+  --user myuser \
+  --password mypassword \
+  --database mydb
 ```
 
+### CLI Options
+
+| Option | Alias | Description | Default |
+|--------|-------|-------------|---------|
+| --output | -o | Output file path | ./types/db.ts |
+| --schema | -s | Database schema to introspect | public |
+| --host | -h | Database host | localhost |
+| --port | -p | Database port | 5432 |
+| --user | -u | Database user | postgres |
+| --password | | Database password | |
+| --database | -d | Database name | |
+| --dry-run | | Preview without writing to file | false |
+
+The CLI will first look for connection details in command line arguments, then fall back to environment variables if not provided.
+
 Then, you can copy the generated types to your project (see [Knex documentation](https://knexjs.org/guide/#typescript)).
+
+## Integration with Knex
+
+After generating the types, you need to:
+
+1. Import the generated types in your project
+2. Configure Knex to use the types:
+
+```typescript
+import { knex } from 'knex'
+
+// The types will be automatically used by Knex
+const db = knex({
+  client: 'pg',
+  connection: {
+    // your connection config
+  }
+})
+
+// You get full type safety:
+const users = await db('users')
+                .select('id', 'email')
+                .where('role', '=', 'admin')
+// users is properly typed!
+```
+
+For more details on using types with Knex, see the [Knex TypeScript documentation](https://knexjs.org/guide/#typescript).
 
 ## Configuration
 
@@ -174,3 +257,24 @@ WHERE c.table_name = ?
   AND c.table_schema = ?
 ORDER BY c.ordinal_position;
 ```
+
+## Troubleshooting
+
+### Connection Issues
+- Make sure your PostgreSQL server is running and accessible
+- Verify your `.env` file contains the correct credentials
+- Check if you can connect to the database using `psql` or another client
+- If using a custom schema, ensure it exists and your user has access to it
+
+### Type Generation Issues
+- Ensure your database contains tables in the specified schema
+- Check if your user has permission to read schema information
+- For custom types (like ENUMs), verify they exist in the target schema
+- Use `--dry-run` to preview the generated types without writing to file
+
+### Common Errors
+- `Error: connect ECONNREFUSED` - Database server is not running or not accessible
+- `Error: permission denied` - Check your database user permissions
+- `Error: schema "xyz" does not exist` - Verify the schema name and permissions
+
+For more help, please [open an issue](https://github.com/FaureAlexis/knex-ts-types-generator/issues).

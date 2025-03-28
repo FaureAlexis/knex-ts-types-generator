@@ -4,6 +4,38 @@ import { z } from 'zod';
 
 dotenv.config();
 
+const connectionSchema = z.object({
+  host: z.string().min(1, 'Database host is required'),
+  port: z.number().int('Port must be a valid number'),
+  user: z.string().min(1, 'Database user is required'),
+  password: z.string().min(1, 'Database password is required'),
+  database: z.string().min(1, 'Database name is required'),
+});
+
+export type ConnectionConfig = z.infer<typeof connectionSchema>;
+
+export function createDbConnection(config: ConnectionConfig): Knex {
+  try {
+    const validatedConfig = connectionSchema.parse(config);
+
+    return knex({
+      client: 'pg',
+      connection: validatedConfig,
+      pool: {
+        min: 2,
+        max: 10,
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const issues = error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('\n');
+      throw new Error(`Database configuration validation failed:\n${issues}`);
+    }
+    throw error;
+  }
+}
+
+// For backwards compatibility with .env files
 const envSchema = z.object({
   DB_HOST: z.string().min(1, 'Database host is required'),
   DB_PORT: z.string().transform((val: string, ctx: z.RefinementCtx) => {
@@ -22,41 +54,30 @@ const envSchema = z.object({
   DB_DATABASE: z.string().min(1, 'Database name is required'),
 });
 
-type Env = z.infer<typeof envSchema>;
-
-function validateEnv(): Env {
+function validateEnv() {
   try {
-    return envSchema.parse(process.env);
-  } catch (error: unknown) {
+    const env = envSchema.parse(process.env);
+    return {
+      host: env.DB_HOST,
+      port: env.DB_PORT,
+      user: env.DB_USER,
+      password: env.DB_PASSWORD,
+      database: env.DB_DATABASE,
+    };
+  } catch (error) {
     if (error instanceof z.ZodError) {
-      const issues = error.issues.map((issue: z.ZodIssue) => `${issue.path.join('.')}: ${issue.message}`).join('\n');
+      const issues = error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('\n');
       throw new Error(`Environment validation failed:\n${issues}`);
     }
     throw error;
   }
 }
 
-const env = validateEnv();
-
-const config: Knex.Config = {
-  client: 'pg',
-  connection: {
-    host: env.DB_HOST,
-    port: env.DB_PORT,
-    user: env.DB_USER,
-    password: env.DB_PASSWORD,
-    database: env.DB_DATABASE,
-  },
-  pool: {
-    min: 2,
-    max: 10,
-  },
-};
-
-export const db = knex(config);
+// Create default connection from environment variables
+export const db = process.env.DB_HOST ? createDbConnection(validateEnv()) : null;
 
 // Test connection and handle errors
-db.raw('SELECT 1')
+db?.raw('SELECT 1')
   .then(() => {
     console.log('Database connection established successfully');
   })

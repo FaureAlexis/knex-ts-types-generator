@@ -1,9 +1,12 @@
-import { db } from './db';
+import { Knex } from 'knex';
 import type { DatabaseSchema, DatabaseTable, DatabaseEnum, RawColumn, RawEnum } from './types';
 
-export async function introspectSchema(): Promise<DatabaseSchema> {
-  const tables = await introspectTables();
-  const enums = await introspectEnums();
+export async function introspectSchema(
+  db: Knex,
+  schema: string = 'public'
+): Promise<DatabaseSchema> {
+  const tables = await introspectTables(db, schema);
+  const enums = await introspectEnums(db, schema);
 
   return {
     tables,
@@ -11,19 +14,22 @@ export async function introspectSchema(): Promise<DatabaseSchema> {
   };
 }
 
-async function introspectTables(): Promise<DatabaseTable[]> {
-  // Get all tables in the public schema
+async function introspectTables(
+  db: Knex,
+  schema: string
+): Promise<DatabaseTable[]> {
+  // Get all tables in the specified schema
   const tablesQuery = `
     SELECT 
       t.table_name,
       t.table_schema
     FROM information_schema.tables t
-    WHERE t.table_schema = 'public'
+    WHERE t.table_schema = ?
       AND t.table_type = 'BASE TABLE'
     ORDER BY t.table_name;
   `;
 
-  const tables = await db.raw(tablesQuery);
+  const tables = await db.raw(tablesQuery, [schema]);
 
   // Get columns for each table
   const result: DatabaseTable[] = [];
@@ -70,7 +76,10 @@ async function introspectTables(): Promise<DatabaseTable[]> {
   return result;
 }
 
-async function introspectEnums(): Promise<DatabaseEnum[]> {
+async function introspectEnums(
+  db: Knex,
+  schema: string
+): Promise<DatabaseEnum[]> {
   const enumsQuery = `
     SELECT 
       t.typname,
@@ -79,12 +88,12 @@ async function introspectEnums(): Promise<DatabaseEnum[]> {
     FROM pg_type t
     JOIN pg_enum e ON t.oid = e.enumtypid
     JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-    WHERE n.nspname = 'public'
+    WHERE n.nspname = ?
     GROUP BY t.typname, n.nspname
     ORDER BY t.typname;
   `;
 
-  const enums = await db.raw(enumsQuery);
+  const enums = await db.raw(enumsQuery, [schema]);
 
   return enums.rows.map((row: RawEnum) => ({
     name: row.typname,
