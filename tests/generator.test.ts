@@ -1,12 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import * as path from 'path'
 import { generateTypes } from '../src/generator'
 import * as fs from 'fs/promises'
 import { introspectSchema } from '../src/introspector'
+import dotenv from 'dotenv'
 
 // Mock fs and introspectSchema
 vi.mock('fs/promises')
 vi.mock('../src/introspector')
+
+beforeAll(() => {
+  // Load test environment variables
+  dotenv.config({ path: '.env.test' })
+})
 
 describe('generateTypes', () => {
   beforeEach(() => {
