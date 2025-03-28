@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
 import * as path from 'path'
 import { generateTypes } from '../src/generator'
 import * as fs from 'fs/promises'
@@ -9,9 +9,17 @@ import dotenv from 'dotenv'
 vi.mock('fs/promises')
 vi.mock('../src/introspector')
 
+// Mock process.exit
+const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
+
 beforeAll(() => {
   // Load test environment variables
   dotenv.config({ path: '.env.test' })
+})
+
+afterAll(() => {
+  // Restore process.exit
+  mockExit.mockRestore()
 })
 
 describe('generateTypes', () => {
