@@ -4,10 +4,17 @@ import { generateTypes } from '../src/generator'
 import * as fs from 'fs/promises'
 import { introspectSchema } from '../src/introspector'
 import dotenv from 'dotenv'
+import { db } from '../src/db'
 
-// Mock fs and introspectSchema
+// Mock fs, introspectSchema and db
 vi.mock('fs/promises')
 vi.mock('../src/introspector')
+vi.mock('../src/db', () => ({
+  db: {
+    raw: vi.fn(),
+    destroy: vi.fn()
+  }
+}))
 
 // Mock process.exit
 const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
@@ -15,6 +22,10 @@ const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any)
 beforeAll(() => {
   // Load test environment variables
   dotenv.config({ path: '.env.test' })
+  
+  // Setup successful db connection mock
+  vi.mocked(db.raw).mockResolvedValue(true)
+  vi.mocked(db.destroy).mockResolvedValue(undefined)
 })
 
 afterAll(() => {
@@ -29,6 +40,9 @@ describe('generateTypes', () => {
     vi.mocked(fs.mkdir).mockResolvedValue(undefined)
     // Mock writeFile to do nothing
     vi.mocked(fs.writeFile).mockResolvedValue(undefined)
+    // Reset db mocks but keep them resolved
+    vi.mocked(db.raw).mockResolvedValue(true)
+    vi.mocked(db.destroy).mockResolvedValue(undefined)
   })
 
   it('should generate type definitions correctly', async () => {
