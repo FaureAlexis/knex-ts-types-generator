@@ -68,11 +68,12 @@ const pgToTsTypeMap: Record<string, string> = {
 };
 
 function getTypeScriptType(column: DatabaseColumn, enums: Set<string>): string {
+  let type: string;
   if (enums.has(column.type)) {
-    return column.type;
+    type = column.type;
+  } else {
+    type = pgToTsTypeMap[column.type] || 'unknown';
   }
-
-  const type = pgToTsTypeMap[column.type] || 'unknown';
   return column.isNullable ? `${type} | null` : type;
 }
 
